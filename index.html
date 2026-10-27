@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TomatoCare AI</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+  <style>
+    body {
+      font-family: Arial;
+      text-align: center;
+      padding: 20px;
+    }
+
+    button {
+      padding: 12px;
+      margin: 10px;
+    }
+
+    img {
+      max-width: 260px;
+      margin: 15px;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>🍅 TomatoCare AI</h1>
+  <p>Select a tomato leaf image to analyze.</p>
+  <input type="file" id="imageInput" accept="image/*">
+  <br>
+  <img id="preview" alt="Selected leaf" hidden>
+  <br>
+  <button id="analyze">Analyze Leaf</button>
+  <p id="result">Your result will appear here.</p>
+
+  <script>
+    const MODEL_URL = "./my_models/";
+    let model;
+
+    async function loadModel() {
+      model = await tmImage.load(
+        MODEL_URL + "model.json",
+        MODEL_URL + "metadata.json"
+      );
+    }
+
+    document.getElementById("imageInput").onchange = event => {
+      const file = event.target.files[0];
+      if (!file) return;
+      const preview = document.getElementById("preview");
+      preview.src = URL.createObjectURL(file);
+      preview.hidden = false;
+    };
+
+    document.getElementById("analyze").onclick = async () => {
+      const preview = document.getElementById("preview");
+      const result = document.getElementById("result");
+      if (!preview.src || preview.hidden) {
+        result.textContent = "Please select a leaf image first.";
+        return;
+      }
+      result.textContent = "Analyzing...";
+      try {
+        if (!model) await loadModel();
+        const predictions = await model.predict(preview);
+        console.log(predictions);
+        predictions.sort((a, b) => b.probability - a.probability);
+        result.innerHTML = predictions
+          .map(p =>
+            `<p><b>${p.className}</b> — ${(p.probability * 100).toFixed(1)}%</p>`
+          )
+          .join("");
+      } catch (error) {
+        result.textContent =
+          "Model could not load. Check the model files and hosting setup.";
+        console.error(error);
+      }
+    };
+  </script>
+</body>
+
+</html>
